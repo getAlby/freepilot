@@ -7,6 +7,7 @@ import { GITHUB_BOT_USERNAME } from "./constants";
 export async function publish(
   jobLogger: winston.Logger,
   jobId: number,
+  issueUrl: string,
   owner: string,
   repo: string,
   issueNumber: number
@@ -107,6 +108,8 @@ export async function publish(
       );
     });
   });
+
+  branchLogs = `Fixes ${issueUrl}\n\n${branchLogs}`
 
   const pullRequestParams: RestEndpointMethodTypes["pulls"]["create"]["parameters"] =
     {

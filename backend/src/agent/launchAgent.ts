@@ -33,7 +33,7 @@ export async function launchAgent(
         },
         cwd: `${jobDir}/${repo}`,
         stdio: ["ignore", "pipe", "pipe"], // Pipe stdout/stderr
-        timeout: 2 * 60 * 1000, // 2 minutes
+        timeout: 10 * 60 * 1000, // 10 minutes
       }
     );
     console.log("Spawned process", { spawnargs: gooseProcess.spawnargs });

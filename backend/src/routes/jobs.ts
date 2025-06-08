@@ -60,7 +60,7 @@ async function jobRoutes(
               await prepareRepository(jobLogger, job.id, url);
             jobLogger.info("Launching agent");
             await launchAgent(jobLogger, job.id, repo, issueContent);
-            await publish(jobLogger, job.id, owner, repo, issueNumber);
+            await publish(jobLogger, job.id, url, owner, repo, issueNumber);
             await options.prisma.job.update({
               where: {
                 id: job.id,
