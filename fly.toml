@@ -1,4 +1,4 @@
-# fly.toml app configuration file generated for github-bot on 2025-04-16T18:03:45+02:00
+# fly.toml app configuration file generated for freepilot on 2025-06-10T13:49:57+07:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
@@ -7,11 +7,17 @@ app = 'freepilot'
 primary_region = 'fra'
 
 [build]
+  dockerfile = 'Dockerfile'
 
 [env]
   BASE_URL = 'https://freepilot.fly.dev'
   DATABASE_URL = 'file:/data/freepilot.db'
-  WORK_DIR="/data"
+  WORK_DIR = '/data'
+
+[[mounts]]
+  source = 'freepilot_data'
+  destination = '/data'
+  initial_size = '1'
 
 [http_service]
   internal_port = 3001
@@ -27,11 +33,6 @@ primary_region = 'fra'
     grace_period = '45s'
     method = 'GET'
     path = '/ping'
-
-[mounts]
-  source = "github_bot_data"
-  destination = "/data"
-  initial_size = '1'
 
 [[vm]]
   memory = '1gb'
