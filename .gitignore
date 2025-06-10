@@ -9,3 +9,5 @@ backend/deno.lock
 
 # files for generated apps
 backend/apps
+
+.data

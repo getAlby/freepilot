@@ -36,11 +36,20 @@ RUN yarn build
 FROM node:22
 
 # Install Goose & dependencies
-RUN apt-get update && apt-get install -y curl unzip git
+RUN apt-get update && apt-get install -y curl unzip git openssh-server
 RUN curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | bash
 
-# TODO: enable the developer extension
-# TODO: configure git
+# make ssh directory, it will be configured later
+RUN mkdir -p /root/.ssh && chmod 0700 /root/.ssh
+
+# Configure SSH to automatically accept host keys
+RUN echo "Host *" >> /root/.ssh/config && \
+    echo "    StrictHostKeyChecking no" >> /root/.ssh/config && \
+    echo "    UserKnownHostsFile=/dev/null" >> /root/.ssh/config
+
+# Configure git
+RUN git config --global user.name "freepilot-bot"
+RUN git config --global user.email "215356755+freepilot-bot@users.noreply.github.com"
 
 WORKDIR /app
 
@@ -61,5 +70,8 @@ COPY backend/prisma ./backend/prisma/
 # Expose the port the backend listens on
 EXPOSE 3001
 
+ENV GOOSE_BIN="/root/.local/bin/goose"
+ENV GOOSE_DISABLE_KEYRING=1
+
 # Command to run the backend server
-CMD cd backend && yarn db:migrate && yarn start:prod
+CMD cd backend && yarn docker:ssh:setup && yarn db:migrate && yarn start:prod

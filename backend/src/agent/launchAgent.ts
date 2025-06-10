@@ -24,12 +24,19 @@ export async function launchAgent(
     `;
 
     const gooseProcess = spawn(
-      "goose",
+      process.env.GOOSE_BIN || "goose",
       ["run", "--with-builtin=developer", `-t "${prompt}"`],
       {
         env: {
           ...process.env,
           GOOSE_MODE: "auto",
+          GOOSE_MODEL: "anthropic/claude-sonnet-4",
+          //GOOSE_MODEL: "deepseek/deepseek-chat-v3-0324:free", // unreliable
+          // TODO: switch to PPQ
+          GOOSE_PROVIDER: "openrouter",
+          ...(process.env.OPENROUTER_API_KEY
+            ? { OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY }
+            : {}),
         },
         cwd: `${jobDir}/${repo}`,
         stdio: ["ignore", "pipe", "pipe"], // Pipe stdout/stderr
@@ -67,5 +74,6 @@ export async function launchAgent(
     });
   } catch (error) {
     jobLogger.error("Error caught while running agent: " + error);
+    throw error;
   }
 }

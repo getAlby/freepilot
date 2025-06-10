@@ -9,79 +9,86 @@ export async function prepareRepository(
   jobId: number,
   issueUrl: string
 ) {
-  const octokit = new Octokit({
-    auth: process.env.GITHUB_TOKEN,
-  });
-
-  const issueIndex = issueUrl.indexOf("/issues");
-  const repoUrl = issueUrl.substring(0, issueIndex);
-  const parts = repoUrl.split("/");
-  const repo = parts[parts.length - 1];
-  const owner = parts[parts.length - 2];
-  const issueNumber = parseInt(
-    issueUrl.substring(issueIndex + "/issues/".length)
-  );
-
-  jobLogger.info("extracted repository from issue URL", {
-    repo,
-    owner,
-    repoUrl,
-    issueNumber,
-  });
-  jobLogger.info("forking repository", { repo, owner });
-
   try {
-    await octokit.repos.createFork({
+    const octokit = new Octokit({
+      auth: process.env.GITHUB_TOKEN,
+    });
+
+    const issueIndex = issueUrl.indexOf("/issues");
+    const repoUrl = issueUrl.substring(0, issueIndex);
+    const parts = repoUrl.split("/");
+    const repo = parts[parts.length - 1];
+    const owner = parts[parts.length - 2];
+    const issueNumber = parseInt(
+      issueUrl.substring(issueIndex + "/issues/".length)
+    );
+
+    jobLogger.info("extracted repository from issue URL", {
       repo,
       owner,
+      repoUrl,
+      issueNumber,
     });
-  } catch (error) {
-    console.error("Failed to fork repo", error);
-  }
+    jobLogger.info("forking repository", { repo, owner });
 
-  jobLogger.info("cloning forked repository", { repo, owner });
-
-  // clone the repo
-  const jobDir = getJobDir(jobId);
-  const gitCloneProcess = spawn(
-    "git",
-    ["clone", `git@github.com:${GITHUB_BOT_USERNAME}/${repo}.git`],
-    {
-      cwd: jobDir,
-      //stdio: ["ignore", "pipe", "pipe"], // Pipe stdout/stderr
+    try {
+      await octokit.repos.createFork({
+        repo,
+        owner,
+      });
+    } catch (error) {
+      console.error("Failed to fork repo", error);
     }
-  );
 
-  await new Promise<void>((resolve, reject) => {
-    gitCloneProcess.on("close", (code) => {
-      if (code === 0) {
-        resolve();
-        return;
+    jobLogger.info("cloning forked repository", { repo, owner });
+
+    // clone the repo
+    const jobDir = getJobDir(jobId);
+    const gitCloneProcess = spawn(
+      "git",
+      ["clone", `git@github.com:${GITHUB_BOT_USERNAME}/${repo}.git`],
+      {
+        cwd: jobDir,
+        //stdio: ["ignore", "pipe", "pipe"], // Pipe stdout/stderr
       }
-      jobLogger.info("clone process exited with non-success code", { code });
-      reject(new Error("clone process exited with non-success code: " + code));
-    });
-  });
-
-  const issue = await octokit.issues.get({
-    owner,
-    repo,
-    issue_number: issueNumber,
-  });
-
-  // TODO: make sure the clone is up to date with upstream
-
-  const issueBody = issue.data.body;
-  if (!issueBody) {
-    jobLogger.warn(
-      "The issue has no description. Add a description for better results."
     );
-  }
 
-  return {
-    owner,
-    repo,
-    issueContent: issue.data.title + "\n\n" + issueBody,
-    issueNumber,
-  };
+    await new Promise<void>((resolve, reject) => {
+      gitCloneProcess.on("close", (code) => {
+        if (code === 0) {
+          resolve();
+          return;
+        }
+        jobLogger.info("clone process exited with non-success code", { code });
+        reject(
+          new Error("clone process exited with non-success code: " + code)
+        );
+      });
+    });
+
+    const issue = await octokit.issues.get({
+      owner,
+      repo,
+      issue_number: issueNumber,
+    });
+
+    // TODO: make sure the clone is up to date with upstream
+
+    const issueBody = issue.data.body;
+    if (!issueBody) {
+      jobLogger.warn(
+        "The issue has no description. Add a description for better results."
+      );
+    }
+
+    return {
+      owner,
+      repo,
+      issueContent: issue.data.title + "\n\n" + issueBody,
+      issueNumber,
+    };
+  } catch (error) {
+    jobLogger.error("Error caught while preparing repository: " + error);
+    throw error;
+  }
 }
