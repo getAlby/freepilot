@@ -146,6 +146,7 @@ async function jobRoutes(
                 prUrl,
               },
             });
+            jobLogger.info("Job completed! 🎉");
           } catch (error) {
             console.error("job failed", error);
             await options.prisma.job.update({
