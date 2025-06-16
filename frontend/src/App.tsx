@@ -1,5 +1,4 @@
 import { Link, Navigate, Route, Routes } from "react-router-dom"; // Import routing components
-import Logo from "./assets/logo.svg";
 import { HomePage } from "./pages/HomePage";
 import { JobPage } from "./pages/JobPage";
 import { AboutPage } from "./pages/AboutPage";
