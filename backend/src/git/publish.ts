@@ -114,13 +114,15 @@ export async function publish(
 
     branchLogs = `Fixes ${issueUrl}\n\n${branchLogs}`;
 
+    const body = `${branchLogs}\n\nView job on Freepilot: https://freepilot.albylabs.com/jobs/${jobId}`;
+
     const pullRequestParams: RestEndpointMethodTypes["pulls"]["create"]["parameters"] =
       {
         owner,
         repo,
         head: `${GITHUB_BOT_USERNAME}:${currentBranchName}`,
         base: repoData.default_branch,
-        body: branchLogs,
+        body,
         title: `[Freepilot] ${currentBranchName
           .substring(0, currentBranchName.lastIndexOf("-")) // remove job number
           .replace("/", ": ")
