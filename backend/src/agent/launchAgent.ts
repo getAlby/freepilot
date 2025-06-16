@@ -16,7 +16,7 @@ export async function launchAgent(
     const prompt = `Follow the following steps in order:
     
     1. *Locally* checkout a new branch to address the issue. Prefix it with feat/ for features or chore/ or fix/ etc based on the type of change. Suffix the branch with -${jobId}
-    2. *Locally* address the issue by making the relevant file changes. Don't show me the code and don't try to run the app.
+    2. *Locally* address the issue by making the relevant file changes. Don't show me the code changes. Don't try to install, build or run tests on the changes.
     3. *Locally* commit the changes on the current branch with a meaningful description.
 
     The issue content is below:
