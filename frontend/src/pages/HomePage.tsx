@@ -83,6 +83,7 @@ export function HomePage() {
           value={issueUrl}
           onChange={(e) => setIssueUrl(e.target.value)}
           autoFocus
+          required
         />
         <Button disabled={loading}>
           <ArrowRightIcon />
