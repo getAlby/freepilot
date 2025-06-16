@@ -119,9 +119,11 @@
   body {
     @apply font-serif;
     @apply bg-background text-foreground;
+  }
+  .freepilot-bg {
     background-image: url("./assets/bg.jpg");
     background-size: cover;
-    background-position: 0% 100%;
+    background-position: 100% 35%;
     background-repeat: no-repeat;
     background-attachment: fixed;
   }

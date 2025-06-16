@@ -16,11 +16,16 @@ model Job {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   status       JobStatus
+  prUrl        String?
 }
 
 enum JobStatus {
   INITIALIZING
+  PREPARING_REPOSITORY
+  CHECKING_WALLET
+  AGENT_WORKING
   GENERATING
+  PUBLISHING
   REVIEWING
   COMPLETED
   FAILED

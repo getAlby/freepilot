@@ -39,6 +39,11 @@ FROM node:22
 RUN apt-get update && apt-get install -y curl unzip git openssh-server
 RUN curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | bash
 
+# Download goose binary with NWC payment support
+# https://github.com/rolznz/goose/tree/feat/nwc-streaming-payments
+RUN wget --no-check-certificate "https://drive.usercontent.google.com/download?id=1v6EFqbDJT-QDZzCl4hpYp4IZnuAOtiNl&confirm=t" -O "/root/.local/bin/goose2"
+RUN chmod +x /root/.local/bin/goose2
+
 # make ssh directory, it will be configured later
 RUN mkdir -p /root/.ssh && chmod 0700 /root/.ssh
 
@@ -70,7 +75,8 @@ COPY backend/prisma ./backend/prisma/
 # Expose the port the backend listens on
 EXPOSE 3001
 
-ENV GOOSE_BIN="/root/.local/bin/goose"
+# use altered goose
+ENV GOOSE_BIN="/root/.local/bin/goose2"
 ENV GOOSE_DISABLE_KEYRING=1
 
 # Command to run the backend server

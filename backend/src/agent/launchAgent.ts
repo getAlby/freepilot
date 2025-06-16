@@ -6,7 +6,8 @@ export async function launchAgent(
   jobLogger: winston.Logger,
   jobId: number,
   repo: string,
-  issueContent: string
+  issueContent: string,
+  userNwcUrl: string
 ) {
   try {
     const jobDir = getJobDir(jobId);
@@ -37,10 +38,11 @@ export async function launchAgent(
           ...(process.env.OPENROUTER_API_KEY
             ? { OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY }
             : {}),
+          GOOSE_NWC_USER_URL: userNwcUrl,
         },
         cwd: `${jobDir}/${repo}`,
         stdio: ["ignore", "pipe", "pipe"], // Pipe stdout/stderr
-        timeout: 10 * 60 * 1000, // 10 minutes
+        timeout: 100 * 60 * 1000, // 100 minutes
       }
     );
     console.log("Spawned process", { spawnargs: gooseProcess.spawnargs });

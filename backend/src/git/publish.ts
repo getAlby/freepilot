@@ -130,7 +130,10 @@ export async function publish(
     jobLogger.info("creating pull request", { pullRequestParams });
 
     try {
-      await octokit.pulls.create(pullRequestParams);
+      const prResult = await octokit.pulls.create(pullRequestParams);
+      jobLogger.info("successfully created pull request");
+
+      return { prUrl: prResult.data.html_url };
     } catch (error) {
       console.error(
         "failed to create pull request",
@@ -139,8 +142,6 @@ export async function publish(
       jobLogger.error("failed to create pull request");
       throw error;
     }
-
-    jobLogger.info("successfully created pull request");
   } catch (error) {
     jobLogger.error("Error caught while publishing: " + error);
     throw error;

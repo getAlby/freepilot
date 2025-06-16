@@ -1,3 +1,4 @@
+import "websocket-polyfill";
 import {
   FastifyInstance,
   FastifyPluginOptions,
@@ -12,9 +13,11 @@ import { prepareRepository } from "../git/prepareRepository";
 import { getJobDir } from "../jobs/getJobDir";
 import { createJobLogger } from "../jobs/createJobLogger";
 import { publish } from "../git/publish";
+import { nwc } from "@getalby/sdk";
 
 interface NewJobBody {
   url: string;
+  userNwcUrl: string;
 }
 
 // Define options structure to include Prisma Client and the LN Backend Cache
@@ -33,10 +36,19 @@ async function jobRoutes(
       request: FastifyRequest<{ Body: NewJobBody }>,
       reply: FastifyReply
     ) => {
-      const { url } = request.body;
+      const { url, userNwcUrl } = request.body;
 
       if (!url) {
         return reply.code(400).send({ message: "Issue URL is required" });
+      }
+      if (!userNwcUrl) {
+        return reply.code(400).send({ message: "Wallet not connected" });
+      }
+
+      if (!process.env.GOOSE_NWC_SERVICE_URL) {
+        return reply
+          .code(500)
+          .send({ message: "Service wallet not configured" });
       }
 
       try {
@@ -55,18 +67,83 @@ async function jobRoutes(
 
         (async () => {
           try {
+            // check user NWC url
+            await options.prisma.job.update({
+              where: {
+                id: job.id,
+              },
+              data: {
+                status: "CHECKING_WALLET",
+              },
+            });
+            const userNwcClient = new nwc.NWCClient({
+              nostrWalletConnectUrl: userNwcUrl,
+            });
+            const serviceNwcClient = new nwc.NWCClient({
+              nostrWalletConnectUrl: process.env.GOOSE_NWC_SERVICE_URL,
+            });
+            // check the user can pay before starting
+            const transaction = await serviceNwcClient.makeInvoice({
+              amount: 1000,
+              description: "Freepilot test payment",
+            });
+            await userNwcClient.payInvoice({
+              invoice: transaction.invoice,
+            });
+
+            userNwcClient.close();
+            serviceNwcClient.close();
+
             jobLogger.info("Preparing repository");
+            await options.prisma.job.update({
+              where: {
+                id: job.id,
+              },
+              data: {
+                status: "PREPARING_REPOSITORY",
+              },
+            });
             const { repo, issueContent, owner, issueNumber } =
               await prepareRepository(jobLogger, job.id, url);
             jobLogger.info("Launching agent");
-            await launchAgent(jobLogger, job.id, repo, issueContent);
-            await publish(jobLogger, job.id, url, owner, repo, issueNumber);
+            await options.prisma.job.update({
+              where: {
+                id: job.id,
+              },
+              data: {
+                status: "AGENT_WORKING",
+              },
+            });
+            await launchAgent(
+              jobLogger,
+              job.id,
+              repo,
+              issueContent,
+              userNwcUrl
+            );
+            await options.prisma.job.update({
+              where: {
+                id: job.id,
+              },
+              data: {
+                status: "PUBLISHING",
+              },
+            });
+            const { prUrl } = await publish(
+              jobLogger,
+              job.id,
+              url,
+              owner,
+              repo,
+              issueNumber
+            );
             await options.prisma.job.update({
               where: {
                 id: job.id,
               },
               data: {
                 status: "COMPLETED",
+                prUrl,
               },
             });
           } catch (error) {
@@ -123,6 +200,7 @@ async function jobRoutes(
       return reply.send({
         id: job.id,
         url: job.url,
+        prUrl: job.prUrl,
         status: job.status,
         createdAt: job.createdAt,
         updatedAt: job.updatedAt,
