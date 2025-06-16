@@ -60,7 +60,6 @@ export async function prepareRepository(
       jobLogger.error("Failed to update fork", {
         error: JSON.stringify(error, Object.getOwnPropertyNames(error)),
       });
-      throw error;
     }
 
     jobLogger.info("cloning forked repository", { repo, owner });
