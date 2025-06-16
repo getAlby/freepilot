@@ -10,6 +10,11 @@ export function AboutPage() {
         payments. Each agent loop will charge the user based on the tokens used
         in the previous iteration.
       </p>
+      <p className="mt-2 text-muted-foreground">
+        Freepilot allows developers to focus more on the requirements of their
+        project and less on coding, by being able to let agents work on multiple
+        issues in parallel.
+      </p>
       <p className="mt-4 text-muted-foreground">
         🤖 AI service is protected against generating content without being
         paid.
