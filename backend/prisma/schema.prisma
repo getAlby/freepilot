@@ -17,6 +17,8 @@ model Job {
   updatedAt    DateTime @updatedAt
   status       JobStatus
   prUrl        String?
+  processId    Int?
+  cancelled    Boolean  @default(false)
 }
 
 enum JobStatus {
@@ -29,4 +31,5 @@ enum JobStatus {
   REVIEWING
   COMPLETED
   FAILED
+  CANCELLED
 }

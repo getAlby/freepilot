@@ -1,13 +1,15 @@
 import { spawn } from "child_process";
 import winston from "winston";
 import { getJobDir } from "../jobs/getJobDir";
+import { PrismaClient } from "@prisma/client";
 
 export async function launchAgent(
   jobLogger: winston.Logger,
   jobId: number,
   repo: string,
   issueContent: string,
-  userNwcUrl: string
+  userNwcUrl: string,
+  prisma: PrismaClient
 ) {
   try {
     const jobDir = getJobDir(jobId);
@@ -60,20 +62,60 @@ export async function launchAgent(
       jobLogger.error(data.toString());
     });
 
-    await new Promise<void>((resolve, reject) => {
+    // Periodically check for cancellation
+    const cancellationCheckInterval = setInterval(async () => {
+      try {
+        const job = await prisma.job.findUnique({
+          where: { id: jobId },
+        });
+        if (job?.cancelled) {
+          jobLogger.info("Job cancellation detected, terminating process");
+          clearInterval(cancellationCheckInterval);
+          gooseProcess.kill('SIGTERM');
+          setTimeout(() => {
+            if (!gooseProcess.killed) {
+              gooseProcess.kill('SIGKILL');
+            }
+          }, 5000);
+        }
+      } catch (error) {
+        jobLogger.error("Error checking for cancellation:", error);
+      }
+    }, 1000); // Check every second
+
+    return new Promise<any>((resolve, reject) => {
       gooseProcess.on("error", (error) => {
+        clearInterval(cancellationCheckInterval);
         jobLogger.error("Process exited with error: " + error);
         reject(error);
       });
       gooseProcess.on("close", (code) => {
-        if (!code) {
-          resolve();
-          return;
-        }
-        jobLogger.error("Goose process exited with non-success code " + code);
-        reject(
-          new Error("Goose process exited with non-success code: " + code)
-        );
+        clearInterval(cancellationCheckInterval);
+        
+        // Check if job was cancelled
+        prisma.job.findUnique({ where: { id: jobId } }).then(job => {
+          if (job?.cancelled) {
+            jobLogger.info("Process terminated due to job cancellation");
+            reject(new Error("Job was cancelled"));
+            return;
+          }
+          
+          if (!code) {
+            resolve(gooseProcess);
+            return;
+          }
+          jobLogger.error("Goose process exited with non-success code " + code);
+          reject(
+            new Error("Goose process exited with non-success code: " + code)
+          );
+        }).catch(dbError => {
+          jobLogger.error("Error checking job status:", dbError);
+          if (!code) {
+            resolve(gooseProcess);
+          } else {
+            reject(new Error("Goose process exited with non-success code: " + code));
+          }
+        });
       });
     });
   } catch (error) {
