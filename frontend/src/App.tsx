@@ -13,7 +13,7 @@ function App() {
           <h1 className="font-semibold text-4xl">Alby Freepilot</h1>
         </Link>
         <p className="text-muted-foreground">
-          Just write github issues - Freepilot will tackle them
+          Just write Github issues - Freepilot will tackle them
         </p>
       </header>
       <Routes>

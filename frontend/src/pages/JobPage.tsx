@@ -22,17 +22,31 @@ export function JobPage() {
   if (!params.id) {
     return <p>Job not found</p>;
   }
+
+  // Use a regular expression to find all occurrences of numbers followed by 'sats'
+  const satsValues = job?.logs.match(/(\d+)\s*sats/g);
+
+  // Calculate the total by summing the extracted values
+  const totalSats = satsValues?.reduce((total, value) => {
+    // Extract the number from the matched string and convert it to an integer
+    return total + parseInt(value);
+  }, 0);
+
   return (
     <div className="w-full max-w-lg">
       {!job && <p>Loading job {params.id}...</p>}
       {job && (
         <div>
-          <p>
-            Issue URL:{" "}
-            <a href={job.url} target="_blank" className="underline">
-              {job.url}
-            </a>
-          </p>
+          <div className="flex justify-between items-center">
+            <p>
+              <a href={job.url} target="_blank" className="underline">
+                {job.url.substring("https://github.com/".length)}
+              </a>
+            </p>
+            <Badge variant="outline" className="mt-2">
+              {totalSats || 0} sats
+            </Badge>
+          </div>
           <div className="mt-4 flex justify-between items-center">
             <div>
               {job.status !== "COMPLETED" && (
