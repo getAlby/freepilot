@@ -37,7 +37,30 @@ export async function prepareRepository(
         owner,
       });
     } catch (error) {
-      console.error("Failed to fork repo", error);
+      jobLogger.error("Failed to fork repo", {
+        error: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+      });
+    }
+
+    jobLogger.info("getting upstream repository data");
+    const { data: repoData } = await octokit.repos.get({
+      owner,
+      repo,
+    });
+
+    jobLogger.info("ensuring fork is up to date");
+    try {
+      const result = await octokit.repos.mergeUpstream({
+        branch: repoData.default_branch,
+        owner: GITHUB_BOT_USERNAME,
+        repo,
+      });
+      jobLogger.info("Synced fork", { message: result.data.message });
+    } catch (error) {
+      jobLogger.error("Failed to update fork", {
+        error: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+      });
+      throw error;
     }
 
     jobLogger.info("cloning forked repository", { repo, owner });

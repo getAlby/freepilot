@@ -137,10 +137,9 @@ export async function publish(
 
       return { prUrl: prResult.data.html_url };
     } catch (error) {
-      console.error(
-        "failed to create pull request",
-        JSON.stringify(error, Object.getOwnPropertyNames(error))
-      );
+      jobLogger.error("failed to create pull request", {
+        error: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+      });
       jobLogger.error("failed to create pull request");
       throw error;
     }

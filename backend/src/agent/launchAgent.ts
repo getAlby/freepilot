@@ -48,7 +48,6 @@ export async function launchAgent(
         timeout: 100 * 60 * 1000, // 100 minutes
       }
     );
-    console.log("Spawned process", { spawnargs: gooseProcess.spawnargs });
     jobLogger.info(
       "Spawned process: " + JSON.stringify(gooseProcess.spawnargs)
     );

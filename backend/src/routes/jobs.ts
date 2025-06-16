@@ -148,7 +148,9 @@ async function jobRoutes(
             });
             jobLogger.info("Job completed! 🎉");
           } catch (error) {
-            console.error("job failed", error);
+            jobLogger.error("job failed", {
+              error: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+            });
             await options.prisma.job.update({
               where: {
                 id: job.id,
