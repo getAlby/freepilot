@@ -5,6 +5,7 @@
 
 app = 'freepilot'
 primary_region = 'fra'
+swap_size_mb = 4096
 
 [build]
   dockerfile = 'Dockerfile'
@@ -35,6 +36,6 @@ primary_region = 'fra'
     path = '/ping'
 
 [[vm]]
-  memory = '1gb'
+  memory = '2gb'
   cpu_kind = 'shared'
   cpus = 1
