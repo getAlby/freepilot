@@ -121,7 +121,7 @@ export async function publish(
         head: `${GITHUB_BOT_USERNAME}:${currentBranchName}`,
         base: repoData.default_branch,
         body: branchLogs,
-        title: `[Bot] #${issueNumber} ${currentBranchName
+        title: `[Freepilot] ${currentBranchName
           .substring(0, currentBranchName.lastIndexOf("-")) // remove job number
           .replace("/", ": ")
           .replaceAll("-", " ")}`,
