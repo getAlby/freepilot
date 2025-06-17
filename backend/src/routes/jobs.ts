@@ -20,13 +20,11 @@ interface NewJobBody {
   userNwcUrl: string;
 }
 
-// Global map to track running job processes
-const jobProcesses = new Map<number, any>();
-
-// Define options structure to include Prisma Client and the LN Backend Cache
 interface JobRoutesOptions extends FastifyPluginOptions {
   prisma: PrismaClient;
 }
+
+const abortJobControllers = new Map<number, AbortController>();
 
 async function jobRoutes(
   fastify: FastifyInstance,
@@ -68,17 +66,11 @@ async function jobRoutes(
         // https://github.com/getAlby/lnfly/issues/11
         const jobLogger = createJobLogger(jobDir);
 
+        const abortController = new AbortController();
+        abortJobControllers.set(job.id, abortController);
+
         (async () => {
           try {
-            // Check if job was cancelled before starting
-            const currentJob = await options.prisma.job.findUnique({
-              where: { id: job.id },
-            });
-            if (currentJob?.cancelled) {
-              jobLogger.info("Job was cancelled before starting");
-              return;
-            }
-
             // check user NWC url
             await options.prisma.job.update({
               where: {
@@ -88,19 +80,6 @@ async function jobRoutes(
                 status: "CHECKING_WALLET",
               },
             });
-
-            // Check cancellation again
-            const jobAfterWalletCheck = await options.prisma.job.findUnique({
-              where: { id: job.id },
-            });
-            if (jobAfterWalletCheck?.cancelled) {
-              jobLogger.info("Job was cancelled during wallet check");
-              await options.prisma.job.update({
-                where: { id: job.id },
-                data: { status: "CANCELLED" },
-              });
-              return;
-            }
 
             const userNwcClient = new nwc.NWCClient({
               nostrWalletConnectUrl: userNwcUrl,
@@ -121,15 +100,11 @@ async function jobRoutes(
             serviceNwcClient.close();
 
             // Check cancellation before repository preparation
-            const jobAfterPayment = await options.prisma.job.findUnique({
+            const jobAfterPayment = await options.prisma.job.findUniqueOrThrow({
               where: { id: job.id },
             });
-            if (jobAfterPayment?.cancelled) {
-              jobLogger.info("Job was cancelled after payment check");
-              await options.prisma.job.update({
-                where: { id: job.id },
-                data: { status: "CANCELLED" },
-              });
+            if (jobAfterPayment.status === "CANCELLED") {
+              jobLogger.info("Job was cancelled before preparing repository");
               return;
             }
 
@@ -143,32 +118,15 @@ async function jobRoutes(
               },
             });
 
-            // Check cancellation before repository preparation
-            const jobBeforeRepo = await options.prisma.job.findUnique({
-              where: { id: job.id },
-            });
-            if (jobBeforeRepo?.cancelled) {
-              jobLogger.info("Job was cancelled before repository preparation");
-              await options.prisma.job.update({
-                where: { id: job.id },
-                data: { status: "CANCELLED" },
-              });
-              return;
-            }
-
             const { repo, issueContent, owner, issueNumber } =
               await prepareRepository(jobLogger, job.id, url);
-              
-            // Check cancellation before launching agent
-            const jobBeforeAgent = await options.prisma.job.findUnique({
+
+            // Check cancellation before repository preparation
+            const jobBeforeAgent = await options.prisma.job.findUniqueOrThrow({
               where: { id: job.id },
             });
-            if (jobBeforeAgent?.cancelled) {
+            if (jobBeforeAgent.status === "CANCELLED") {
               jobLogger.info("Job was cancelled before launching agent");
-              await options.prisma.job.update({
-                where: { id: job.id },
-                data: { status: "CANCELLED" },
-              });
               return;
             }
 
@@ -181,24 +139,15 @@ async function jobRoutes(
                 status: "AGENT_WORKING",
               },
             });
-            
-            const agentProcess = await launchAgent(
+
+            await launchAgent(
               jobLogger,
               job.id,
               repo,
               issueContent,
               userNwcUrl,
-              options.prisma
+              abortController.signal
             );
-            
-            // Store the process for potential cancellation
-            if (agentProcess) {
-              jobProcesses.set(job.id, agentProcess);
-              await options.prisma.job.update({
-                where: { id: job.id },
-                data: { processId: agentProcess.pid },
-              });
-            }
 
             await options.prisma.job.update({
               where: {
@@ -226,24 +175,23 @@ async function jobRoutes(
               },
             });
             jobLogger.info("Job completed! 🎉");
-            
-            // Clean up process tracking
-            jobProcesses.delete(job.id);
           } catch (error) {
             jobLogger.error("job failed", {
               error: JSON.stringify(error, Object.getOwnPropertyNames(error)),
             });
-            await options.prisma.job.update({
+            await options.prisma.job.updateMany({
               where: {
                 id: job.id,
+                status: {
+                  not: "CANCELLED",
+                },
               },
               data: {
                 status: "FAILED",
               },
             });
-            // Clean up process tracking
-            jobProcesses.delete(job.id);
           }
+          abortJobControllers.delete(job.id);
         })();
 
         return reply.code(201).send({
@@ -300,82 +248,64 @@ async function jobRoutes(
   });
 
   // Cancel job
-  fastify.post<{ Params: { id: string } }>("/:id/cancel", async (request, reply) => {
-    const { id } = request.params;
-    const jobId = parseInt(id, 10);
+  fastify.post<{ Params: { id: string } }>(
+    "/:id/cancel",
+    async (request, reply) => {
+      const { id } = request.params;
+      const jobId = parseInt(id, 10);
 
-    if (isNaN(jobId)) {
-      return reply.code(400).send({ message: "Invalid Job ID format." });
-    }
-
-    try {
-      // Check if job exists and can be cancelled
-      const job = await options.prisma.job.findUnique({
-        where: { id: jobId },
-      });
-      
-      if (!job) {
-        return reply.code(404).send({ message: "Job not found." });
+      if (isNaN(jobId)) {
+        return reply.code(400).send({ message: "Invalid Job ID format." });
       }
 
-      // Don't cancel already completed, failed, or cancelled jobs
-      if (job.status === "COMPLETED" || job.status === "FAILED" || job.status === "CANCELLED") {
-        return reply.code(400).send({ 
-          message: `Cannot cancel job with status: ${job.status}` 
-        });
-      }
-
-      // Mark job as cancelled in database
-      await options.prisma.job.update({
-        where: { id: jobId },
-        data: { 
-          cancelled: true,
-          status: "CANCELLED"
-        },
-      });
-
-      // If there's an active process, terminate it
-      const process = jobProcesses.get(jobId);
-      if (process) {
-        fastify.log.info(`Terminating process ${process.pid} for job ${jobId}`);
-        try {
-          // Send SIGTERM first for graceful shutdown
-          process.kill('SIGTERM');
-          
-          // If process doesn't terminate gracefully, force kill after 5 seconds
-          setTimeout(() => {
-            if (!process.killed) {
-              process.kill('SIGKILL');
-            }
-          }, 5000);
-          
-        } catch (killError) {
-          fastify.log.error(killError, `Failed to kill process for job ${jobId}`);
-        }
-        
-        // Remove from tracking
-        jobProcesses.delete(jobId);
-      }
-
-      // Log the cancellation
       try {
-        const jobDir = getJobDir(jobId);
-        const jobLogger = createJobLogger(jobDir);
-        jobLogger.info("Job cancelled by user request");
-      } catch (logError) {
-        fastify.log.error(logError, `Failed to log cancellation for job ${jobId}`);
-      }
+        // Check if job exists and can be cancelled
+        const job = await options.prisma.job.findUnique({
+          where: { id: jobId },
+        });
 
-      return reply.send({ 
-        message: "Job cancelled successfully",
-        jobId: jobId,
-        status: "CANCELLED"
-      });
-    } catch (error) {
-      fastify.log.error(error, `Failed to cancel job ${jobId}`);
-      return reply.code(500).send({ message: "Internal Server Error." });
+        if (!job) {
+          return reply.code(404).send({ message: "Job not found." });
+        }
+
+        // Don't cancel already completed, failed, or cancelled jobs
+        if (
+          job.status === "COMPLETED" ||
+          job.status === "FAILED" ||
+          job.status === "CANCELLED"
+        ) {
+          return reply.code(400).send({
+            message: `Cannot cancel job with status: ${job.status}`,
+          });
+        }
+
+        const abortController = abortJobControllers.get(job.id);
+        if (!abortController) {
+          return reply
+            .code(409)
+            .send({ message: "Job abort controller is missing" });
+        }
+        abortController.abort();
+
+        // Mark job as cancelled in database
+        await options.prisma.job.update({
+          where: { id: jobId },
+          data: {
+            status: "CANCELLED",
+          },
+        });
+
+        return reply.send({
+          message: "Job cancelled successfully",
+          jobId: jobId,
+          status: "CANCELLED",
+        });
+      } catch (error) {
+        fastify.log.error(error, `Failed to cancel job ${jobId}`);
+        return reply.code(500).send({ message: "Internal Server Error." });
+      }
     }
-  });
+  );
 }
 
 export default jobRoutes;

@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { LoaderIcon, CircleStop } from "lucide-react";
+import { LoaderIcon, CircleStop, Loader2Icon } from "lucide-react";
 import React from "react";
 import { useParams } from "react-router-dom";
 import useSWR from "swr";
@@ -23,22 +23,19 @@ export function JobPage() {
 
   const handleStopJob = async () => {
     if (!params.id) return;
-    
+
     const confirmed = window.confirm(
       "Are you sure you want to cancel this job? This action cannot be undone."
     );
-    
+
     if (!confirmed) return;
-    
+
     setIsStopping(true);
     try {
       const response = await fetch(`/api/jobs/${params.id}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        method: "POST",
       });
-      
+
       if (response.ok) {
         // Refresh job data to show updated status
         mutate();
@@ -47,8 +44,8 @@ export function JobPage() {
         alert(`Failed to cancel job: ${errorData.message}`);
       }
     } catch (error) {
-      console.error('Error cancelling job:', error);
-      alert('Failed to cancel job. Please try again.');
+      console.error("Error cancelling job:", error);
+      alert("Failed to cancel job. Please try again.");
     } finally {
       setIsStopping(false);
     }
@@ -68,9 +65,11 @@ export function JobPage() {
   }, 0);
 
   // Check if job can be cancelled (not completed, failed, or already cancelled)
-  const canBeCancelled = job && 
-    job.status !== "COMPLETED" && 
-    job.status !== "FAILED" && 
+  const canBeCancelled =
+    job &&
+    job.status !== "COMPLETED" &&
+    job.status !== "PUBLISHING" &&
+    job.status !== "FAILED" &&
     job.status !== "CANCELLED";
 
   return (
@@ -93,9 +92,9 @@ export function JobPage() {
               {job.status !== "COMPLETED" && (
                 <Badge
                   variant={
-                    job.status === "FAILED" ? "destructive" : 
-                    job.status === "CANCELLED" ? "secondary" : 
-                    "default"
+                    job.status === "FAILED" || job.status === "CANCELLED"
+                      ? "destructive"
+                      : "default"
                   }
                 >
                   {job.status.replace("_", " ")}
@@ -112,13 +111,16 @@ export function JobPage() {
               {canBeCancelled && (
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="ghost"
                   onClick={handleStopJob}
                   disabled={isStopping}
-                  className="text-red-600 hover:text-red-700 hover:border-red-300"
+                  className="p-0 m-0 -ml-2"
                 >
-                  <CircleStop size={16} className="mr-1" />
-                  {isStopping ? "Stopping..." : "Stop"}
+                  {isStopping ? (
+                    <Loader2Icon size={16} className="animate-spin" />
+                  ) : (
+                    <CircleStop size={16} />
+                  )}
                 </Button>
               )}
             </div>

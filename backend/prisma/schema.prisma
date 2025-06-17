@@ -17,8 +17,6 @@ model Job {
   updatedAt    DateTime @updatedAt
   status       JobStatus
   prUrl        String?
-  processId    Int?
-  cancelled    Boolean  @default(false)
 }
 
 enum JobStatus {
