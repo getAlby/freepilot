@@ -29,4 +29,5 @@ enum JobStatus {
   REVIEWING
   COMPLETED
   FAILED
+  CANCELLED
 }

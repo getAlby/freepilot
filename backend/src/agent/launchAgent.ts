@@ -1,13 +1,15 @@
 import { spawn } from "child_process";
 import winston from "winston";
 import { getJobDir } from "../jobs/getJobDir";
+import { PrismaClient } from "@prisma/client";
 
 export async function launchAgent(
   jobLogger: winston.Logger,
   jobId: number,
   repo: string,
   issueContent: string,
-  userNwcUrl: string
+  userNwcUrl: string,
+  signal: AbortSignal
 ) {
   try {
     const jobDir = getJobDir(jobId);
@@ -46,6 +48,7 @@ export async function launchAgent(
         cwd: `${jobDir}/${repo}`,
         stdio: ["ignore", "pipe", "pipe"], // Pipe stdout/stderr
         timeout: 100 * 60 * 1000, // 100 minutes
+        signal,
       }
     );
     jobLogger.info(
@@ -66,10 +69,16 @@ export async function launchAgent(
         reject(error);
       });
       gooseProcess.on("close", (code) => {
+        if (signal.aborted) {
+          jobLogger.error("Process terminated due to job cancellation");
+          reject(new Error("Job was cancelled"));
+        }
+
         if (!code) {
           resolve();
           return;
         }
+
         jobLogger.error("Goose process exited with non-success code " + code);
         reject(
           new Error("Goose process exited with non-success code: " + code)
