@@ -27,7 +27,7 @@ export function AboutPage() {
         AI agent is protected against generating content without being paid.
       </p>
       <p className="mt-2 text-muted-foreground">
-        🧑‍💻 Users only pay what is needed, rather than guessing and depositing in
+        🧑‍💻 Users only pay what is needed, rather than purchasing credits in
         advance or paying a monthly subscription.
       </p>
       <p className="mt-2 text-muted-foreground">
