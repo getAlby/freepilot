@@ -16,20 +16,42 @@ export function AboutPage() {
         issues in parallel.
       </p>
       <p className="mt-4 text-muted-foreground">
-        🤖 AI service is protected against generating content without being
-        paid.
+        🤖{" "}
+        <a
+          href="https://block.github.io/goose"
+          target="_blank"
+          className="underline"
+        >
+          Goose
+        </a>{" "}
+        AI agent is protected against generating content without being paid.
       </p>
       <p className="mt-2 text-muted-foreground">
         🧑‍💻 Users only pay what is needed, rather than guessing and depositing in
-        advance.
+        advance or paying a monthly subscription.
       </p>
       <p className="mt-2 text-muted-foreground">
-        🔒 NWC budgets allow users to protect themselves from excess charges.
+        🔒{" "}
+        <a href="https://nwc.dev" target="_blank" className="underline">
+          NWC
+        </a>{" "}
+        lightning wallet budgets allow users to protect themselves from excess
+        charges.
       </p>
 
       <Link to="/" className="flex items-center justify-center">
         <Button className="mt-8">Try Freepilot now</Button>
       </Link>
+
+      <div className="mt-4 w-full flex justify-center">
+        <a
+          href="https://github.com/getalby/freepilot"
+          target="_blank"
+          className="underline text-xs"
+        >
+          View source
+        </a>
+      </div>
     </div>
   );
 }
