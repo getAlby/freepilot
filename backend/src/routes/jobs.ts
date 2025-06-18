@@ -14,6 +14,7 @@ import { getJobDir } from "../jobs/getJobDir";
 import { createJobLogger } from "../jobs/createJobLogger";
 import { publish } from "../git/publish";
 import { nwc } from "@getalby/sdk";
+import { cleanupOldRepositories } from "../jobs/cleanupOldRepositories";
 
 interface NewJobBody {
   url: string;
@@ -53,6 +54,9 @@ async function jobRoutes(
       }
 
       try {
+        // Clean up old repository folders to ensure sufficient disk space
+        await cleanupOldRepositories(fastify.log, options.prisma);
+
         const job = await options.prisma.job.create({
           data: {
             url,

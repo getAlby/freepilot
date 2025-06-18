@@ -17,6 +17,7 @@ model Job {
   updatedAt    DateTime @updatedAt
   status       JobStatus
   prUrl        String?
+  cleanedUp    Boolean  @default(false)
 }
 
 enum JobStatus {
