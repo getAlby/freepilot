@@ -68,7 +68,14 @@ export async function prepareRepository(
     const jobDir = getJobDir(jobId);
     const gitCloneProcess = spawn(
       "git",
-      ["clone", `git@github.com:${GITHUB_BOT_USERNAME}/${repo}.git`],
+      [
+        "clone",
+        "--no-tags",
+        "--progress",
+        "--no-recurse-submodules",
+        "--depth=1",
+        `git@github.com:${GITHUB_BOT_USERNAME}/${repo}.git`
+      ],
       {
         cwd: jobDir,
         //stdio: ["ignore", "pipe", "pipe"], // Pipe stdout/stderr
