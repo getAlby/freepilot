@@ -13,6 +13,7 @@ import {
   requestProvider,
   WebLNProviders,
 } from "@getalby/bitcoin-connect-react";
+import { StatsSection } from "@/components/StatsSection";
 
 export function HomePage() {
   const [issueUrl, setIssueUrl] = React.useState("");
@@ -75,34 +76,37 @@ export function HomePage() {
   }
 
   return (
-    <form className="w-full max-w-lg" onSubmit={handleSubmit}>
-      <Label>Enter Github Issue URL</Label>
-      <div className="flex gap-2 justify-center mt-2">
-        <Input
-          placeholder="https://github.com/getAlby/hub/issues/1"
-          value={issueUrl}
-          onChange={(e) => setIssueUrl(e.target.value)}
-          autoFocus
-          required
-        />
-        <Button disabled={loading}>
-          <ArrowRightIcon />
-        </Button>
-      </div>
-      <div className="mt-2 text-xs text-muted-foreground">
-        Price: 1000 sats + AI usage (Claude Sonnet 4).{" "}
-        <Link to="/about" className="underline">
-          Learn More
-        </Link>
-      </div>
-      {walletConnected && (
-        <div
-          className="mt-2 text-xs text-muted-foreground underline cursor-pointer"
-          onClick={disconnect}
-        >
-          Disconnect Wallet
+    <>
+      <StatsSection />
+      <form className="w-full max-w-lg" onSubmit={handleSubmit}>
+        <Label>Enter Github Issue URL</Label>
+        <div className="flex gap-2 justify-center mt-2">
+          <Input
+            placeholder="https://github.com/getAlby/hub/issues/1"
+            value={issueUrl}
+            onChange={(e) => setIssueUrl(e.target.value)}
+            autoFocus
+            required
+          />
+          <Button disabled={loading}>
+            <ArrowRightIcon />
+          </Button>
         </div>
-      )}
-    </form>
+        <div className="mt-2 text-xs text-muted-foreground">
+          Price: 1000 sats + AI usage (Claude Sonnet 4).{" "}
+          <Link to="/about" className="underline">
+            Learn More
+          </Link>
+        </div>
+        {walletConnected && (
+          <div
+            className="mt-2 text-xs text-muted-foreground underline cursor-pointer"
+            onClick={disconnect}
+          >
+            Disconnect Wallet
+          </div>
+        )}
+      </form>
+    </>
   );
 }
