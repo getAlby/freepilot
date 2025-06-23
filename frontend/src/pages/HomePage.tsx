@@ -77,7 +77,6 @@ export function HomePage() {
 
   return (
     <>
-      <StatsSection />
       <form className="w-full max-w-lg" onSubmit={handleSubmit}>
         <Label>Enter Github Issue URL</Label>
         <div className="flex gap-2 justify-center mt-2">
@@ -107,6 +106,7 @@ export function HomePage() {
           </div>
         )}
       </form>
+      <StatsSection />
     </>
   );
 }
