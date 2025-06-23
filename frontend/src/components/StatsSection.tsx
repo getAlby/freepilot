@@ -11,6 +11,7 @@
  */
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface Stats {
   totalCompletedJobs: number;
@@ -28,13 +29,10 @@ interface StatsApiResponse {
 
 export function StatsSection() {
   const [stats, setStats] = React.useState<Stats | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     async function fetchStats() {
       try {
-        setIsLoading(true);
         const response = await fetch("/api/stats");
 
         if (!response.ok) {
@@ -50,49 +48,11 @@ export function StatsSection() {
         }
       } catch (err) {
         console.error("Error fetching stats:", err);
-        setError("Failed to load stats");
-      } finally {
-        setIsLoading(false);
       }
     }
 
     fetchStats();
   }, []);
-
-  if (isLoading) {
-    return (
-      <div className="w-full max-w-4xl mb-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">
-                  <div className="h-4 bg-gray-200 rounded w-24"></div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-8 bg-gray-200 rounded w-16"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !stats) {
-    return (
-      <div className="w-full max-w-4xl mb-8">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground text-center">
-              {error || "Unable to load stats"}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   const formatNumber = (number: number): string => {
     return number.toLocaleString();
@@ -104,7 +64,7 @@ export function StatsSection() {
         Freepilot Stats
       </h2>
       <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-        <Card>
+        <Card className={cn(!stats && "animate-pulse")}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-muted-foreground">
               Jobs Completed
@@ -112,12 +72,12 @@ export function StatsSection() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatNumber(stats.totalCompletedJobs)}
+              {stats && formatNumber(stats.totalCompletedJobs)}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={cn(!stats && "animate-pulse")}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-muted-foreground">
               Sats Received
@@ -125,12 +85,12 @@ export function StatsSection() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatNumber(stats.totalEarningsInSats)}
+              {stats && formatNumber(stats.totalEarningsInSats)}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={cn(!stats && "animate-pulse")}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-muted-foreground">
               Tokens Processed
@@ -138,12 +98,12 @@ export function StatsSection() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatNumber(stats.totalTokensProcessed)}
+              {stats && formatNumber(stats.totalTokensProcessed)}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={cn(!stats && "animate-pulse")}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-muted-foreground">
               PRs Merged
@@ -151,7 +111,7 @@ export function StatsSection() {
           </CardHeader>
           <CardContent className="h-full flex items-end">
             <div className="text-2xl font-bold">
-              {formatNumber(stats.totalMergedPRs)}
+              {stats && formatNumber(stats.totalMergedPRs)}
             </div>
           </CardContent>
         </Card>
