@@ -3,6 +3,7 @@ import fastifyStatic from "@fastify/static";
 import path from "path";
 import { PrismaClient } from "@prisma/client"; // Import Prisma Client
 import jobRoutes from "./routes/jobs";
+import statsRoutes from "./routes/stats";
 
 const prisma = new PrismaClient(); // Instantiate Prisma Client
 
@@ -21,6 +22,12 @@ fastify.register(jobRoutes, {
   prefix: "/api/jobs",
   prisma,
 }); // Pass prisma and cache
+
+// Register stats routes
+fastify.register(statsRoutes, {
+  prefix: "/api/stats",
+  prisma,
+});
 
 // Fallback route to serve index.html for client-side routing
 fastify.setNotFoundHandler((request, reply) => {
