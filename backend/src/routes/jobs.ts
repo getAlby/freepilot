@@ -15,6 +15,7 @@ import { createJobLogger } from "../jobs/createJobLogger";
 import { publish } from "../git/publish";
 import { nwc } from "@getalby/sdk";
 import { cleanupOldRepositories } from "../jobs/cleanupOldRepositories";
+import { analyzeLogs } from "../jobs/analyzeLogs";
 import winston from "winston";
 
 interface NewJobBody {
@@ -241,6 +242,7 @@ async function jobRoutes(
       const jobLogfile = path.join(getJobDir(jobId), "log.txt");
 
       const logfileContents = await fs.readFile(jobLogfile);
+      const summary = analyzeLogs(logfileContents.toString());
 
       return reply.send({
         id: job.id,
@@ -250,6 +252,7 @@ async function jobRoutes(
         createdAt: job.createdAt,
         updatedAt: job.updatedAt,
         logs: logfileContents.toString(),
+        summary,
       });
     } catch (error) {
       fastify.log.error(error, `Failed to fetch zaps for App ID: ${jobId}`);

@@ -1,10 +1,16 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { LoaderIcon, CircleStop, Loader2Icon } from "lucide-react";
+import { LoaderIcon, CircleStop, Loader2Icon, CheckCircleIcon } from "lucide-react";
 import React from "react";
 import { useParams } from "react-router-dom";
 import useSWR from "swr";
+
+interface JobSummary {
+  currentStep: string;
+  completedSteps: string[];
+  totalCost: number;
+}
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -17,6 +23,7 @@ export function JobPage() {
     prUrl: string;
     status: string;
     logs: string;
+    summary: JobSummary;
   }>(params.id && `/api/jobs/${params.id}`, fetcher, {
     refreshInterval: 5000,
   });
@@ -64,6 +71,9 @@ export function JobPage() {
     return total + parseInt(value);
   }, 0);
 
+  // Use summary total cost if available, otherwise fall back to regex calculation
+  const displayTotalSats = job?.summary?.totalCost ?? totalSats ?? 0;
+
   // Check if job can be cancelled (not completed, failed, or already cancelled)
   const canBeCancelled =
     job &&
@@ -84,9 +94,53 @@ export function JobPage() {
               </a>
             </p>
             <Badge variant="outline" className="mt-2">
-              {totalSats || 0} sats
+              {displayTotalSats} sats
             </Badge>
           </div>
+
+          {/* High-level summary section */}
+          {job.summary && (
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <h3 className="font-semibold text-sm text-gray-700 mb-3">
+                Progress Summary
+              </h3>
+              
+              {/* Current step */}
+              <div className="mb-3">
+                <div className="flex items-center gap-2 text-sm">
+                  {job.summary.currentStep === "Completed" ? (
+                    <CheckCircleIcon className="text-green-500" size={16} />
+                  ) : job.summary.currentStep === "Failed" ? (
+                    <CircleStop className="text-red-500" size={16} />
+                  ) : job.summary.currentStep === "Cancelled" ? (
+                    <CircleStop className="text-gray-500" size={16} />
+                  ) : (
+                    <LoaderIcon className="animate-spin text-blue-500" size={16} />
+                  )}
+                  <span className="font-medium">
+                    {job.summary.currentStep === "Completed" ? "✅ Completed" :
+                     job.summary.currentStep === "Failed" ? "❌ Failed" :
+                     job.summary.currentStep === "Cancelled" ? "⏹️ Cancelled" :
+                     `Current: ${job.summary.currentStep}`}
+                  </span>
+                </div>
+              </div>
+
+              {/* Completed steps */}
+              {job.summary.completedSteps.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-600 mb-2">Completed:</p>
+                  {job.summary.completedSteps.map((step, index) => (
+                    <div key={index} className="flex items-center gap-2 text-xs">
+                      <CheckCircleIcon className="text-green-500" size={14} />
+                      <span className="text-gray-700">{step}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="mt-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
               {job.status !== "COMPLETED" && (
